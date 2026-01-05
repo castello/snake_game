@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스네이크 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #gameCanvas {
+            border: 4px solid white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+
+        #score {
+            color: white;
+            font-size: 20px;
+            margin-top: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #highScore {
+            color: #ffd43b;
+            font-size: 16px;
+            margin-top: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .new-record {
+            color: #ffd43b;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #instructions {
+            color: white;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .game-over h2 {
+            margin-top: 0;
+            color: #ff6b6b;
+        }
+
+        .game-over button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            font-size: 16px;
+            background: #51cf66;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .game-over button:hover {
+            background: #40c057;
+        }
+
+        .ranking-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+
+        .ranking-panel h2 {
+            color: white;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .ranking-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .ranking-item {
+            background: rgba(255, 255, 255, 0.15);
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            transition: transform 0.2s;
+        }
+
+        .ranking-item:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ranking-item.rank-1 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .ranking-item.rank-2 {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+            color: #333;
+            font-weight: bold;
+        }
+
+        .ranking-item.rank-3 {
+            background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
+            color: #333;
+            font-weight: bold;
+        }
+
+        .rank-number {
+            font-size: 18px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .rank-score {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .rank-date {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-left: 8px;
+        }
+
+        .clear-ranking-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 8px;
+            background: rgba(255, 107, 107, 0.8);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .clear-ranking-btn:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+    </style>
+</head>
+<body>
+    <h1>🐍 스네이크 게임</h1>
+
+    <div class="game-container">
+        <div class="left-section">
+            <div id="score">점수: 0</div>
+            <div id="highScore">최고 점수: 0</div>
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div id="instructions">
+                방향키로 이동하세요 | 빨간 사과를 먹으세요!
+            </div>
+        </div>
+
+        <div class="ranking-panel">
+            <h2>🏆 TOP 5 랭킹</h2>
+            <ol class="ranking-list" id="rankingList">
+            </ol>
+            <button class="clear-ranking-btn" onclick="clearRanking()">랭킹 초기화</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>게임 오버!</h2>
+        <p id="finalScore"></p>
+        <button onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const gameOverElement = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+        const rankingListElement = document.getElementById('rankingList');
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [
+            {x: 10, y: 10}
+        ];
+        let velocity = {x: 0, y: 0};
+        let food = {x: 15, y: 15};
+        let score = 0;
+        let highScore = 0;
+        let gameRunning = false;
+        let gameLoop;
+        let rankings = [];
+        let isGameOver = false;
+
+        // API 서버 URL
+        const API_URL = 'http://localhost:3333/api';
+
+        // 랭킹 불러오기
+        async function loadRankings() {
+            try {
+                const response = await fetch(`${API_URL}/rankings`);
+                if (!response.ok) throw new Error('서버 응답 오류');
+
+                rankings = await response.json();
+                updateRankingDisplay();
+
+                highScore = rankings.length > 0 ? rankings[0].score : 0;
+                highScoreElement.textContent = '최고 점수: ' + highScore;
+            } catch (error) {
+                console.error('랭킹 불러오기 실패:', error);
+                rankings = [];
+                updateRankingDisplay();
+            }
+        }
+
+        // 랭킹 저장하기
+        async function saveRanking(newScore) {
+            const now = new Date();
+            const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const timestamp = now.getTime();
+
+            try {
+                const response = await fetch(`${API_URL}/rankings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        score: newScore,
+                        date: dateStr,
+                        timestamp: timestamp
+                    })
+                });
+
+                if (!response.ok) throw new Error('저장 실패');
+
+                await loadRankings();
+            } catch (error) {
+                console.error('랭킹 저장 중 오류:', error);
+            }
+        }
+
+        // 랭킹 화면 업데이트
+        function updateRankingDisplay() {
+            rankingListElement.innerHTML = '';
+
+            const top5 = rankings.slice(0, 5);
+
+            if (top5.length === 0) {
+                rankingListElement.innerHTML = '<li style="color: white; text-align: center; padding: 20px;">아직 기록이 없습니다</li>';
+                return;
+            }
+
+            top5.forEach((record, index) => {
+                const li = document.createElement('li');
+                li.className = 'ranking-item';
+
+                if (index === 0) li.classList.add('rank-1');
+                else if (index === 1) li.classList.add('rank-2');
+                else if (index === 2) li.classList.add('rank-3');
+
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+
+                li.innerHTML = `
+                    <span>
+                        <span class="rank-number">${medal} ${index + 1}위</span>
+                        <span class="rank-date">${record.date}</span>
+                    </span>
+                    <span class="rank-score">${record.score}점</span>
+                `;
+
+                rankingListElement.appendChild(li);
+            });
+        }
+
+        // 랭킹 초기화
+        async function clearRanking() {
+            if (confirm('정말로 모든 랭킹을 초기화하시겠습니까?')) {
+                try {
+                    const response = await fetch(`${API_URL}/rankings`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) throw new Error('초기화 실패');
+
+                    rankings = [];
+                    highScore = 0;
+                    updateRankingDisplay();
+                    highScoreElement.textContent = '최고 점수: 0';
+                } catch (error) {
+                    console.error('랭킹 초기화 중 오류:', error);
+                }
+            }
+        }
+
+        // 키보드 입력 처리
+        document.addEventListener('keydown', keyPress);
+
+        function keyPress(e) {
+            const arrowKeys = ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'];
+            if (!gameRunning && !isGameOver && arrowKeys.includes(e.key)) {
+                startGame();
+            }
+
+            switch(e.key) {
+                case 'ArrowLeft': // 왼쪽
+                    if (velocity.x !== 1) {
+                        velocity = {x: -1, y: 0};
+                    }
+                    break;
+                case 'ArrowUp': // 위
+                    if (velocity.y !== 1) {
+                        velocity = {x: 0, y: -1};
+                    }
+                    break;
+                case 'ArrowRight': // 오른쪽
+                    if (velocity.x !== -1) {
+                        velocity = {x: 1, y: 0};
+                    }
+                    break;
+                case 'ArrowDown': // 아래
+                    if (velocity.y !== -1) {
+                        velocity = {x: 0, y: 1};
+                    }
+                    break;
+            }
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gameLoop = setInterval(update, 100);
+        }
+
+        function update() {
+            // 뱀 이동
+            const head = {x: snake[0].x + velocity.x, y: snake[0].y + velocity.y};
+
+            // 벽 충돌 체크
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver();
+                return;
+            }
+
+            // 자기 자신과 충돌 체크
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            // 음식 먹기
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreElement.textContent = '점수: ' + score;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function draw() {
+            // 배경
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 그리드 그리기 (선택적)
+            ctx.strokeStyle = '#2a2a3e';
+            for (let i = 0; i < tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // 뱀 그리기
+            snake.forEach((segment, index) => {
+                if (index === 0) {
+                    // 머리
+                    ctx.fillStyle = '#51cf66';
+                    ctx.fillRect(
+                        segment.x * gridSize + 1,
+                        segment.y * gridSize + 1,
+                        gridSize - 2,
+                        gridSize - 2
+                    );
+
+                    // 뱀 눈 추가
+                    ctx.fillStyle = 'white';
+                    const eyeSize = 3;
+
+                    if (velocity.x === 1) { // 오른쪽
+                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 12, eyeSize, eyeSize);
+                    } else if (velocity.x === -1) { // 왼쪽
+                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 12, eyeSize, eyeSize);
+                    } else if (velocity.y === -1) { // 위
+                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 5, eyeSize, eyeSize);
+                    } else if (velocity.y === 1) { // 아래
+                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 12, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 12, eyeSize, eyeSize);
+                    } else {
+                        // 정지 상태
+                        ctx.fillRect(segment.x * gridSize + 6, segment.y * gridSize + 7, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * gridSize + 11, segment.y * gridSize + 7, eyeSize, eyeSize);
+                    }
+                } else {
+                    // 몸통
+                    ctx.fillStyle = '#40c057';
+                    ctx.fillRect(
+                        segment.x * gridSize + 1,
+                        segment.y * gridSize + 1,
+                        gridSize - 2,
+                        gridSize - 2
+                    );
+                }
+            });
+
+            // 음식 그리기 (사과 이모지)
+            ctx.font = `${gridSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+                '🍎',
+                food.x * gridSize + gridSize / 2,
+                food.y * gridSize + gridSize / 2
+            );
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+
+            // 뱀과 겹치지 않는지 확인
+            for (let segment of snake) {
+                if (food.x === segment.x && food.y === segment.y) {
+                    generateFood();
+                    return;
+                }
+            }
+        }
+
+        function gameOver() {
+            clearInterval(gameLoop);
+            gameRunning = false;
+            isGameOver = true;
+
+            // 랭킹에 점수 추가
+            if (score > 0) {
+                const isNewRecord = score > highScore;
+                saveRanking(score);
+
+                let message = '최종 점수: ' + score;
+                if (isNewRecord) {
+                    message = '<span class="new-record">🎉 새로운 최고 기록! 🎉</span><br>최종 점수: ' + score;
+                }
+
+                finalScoreElement.innerHTML = message;
+            } else {
+                finalScoreElement.innerHTML = '최종 점수: 0';
+            }
+
+            gameOverElement.style.display = 'block';
+        }
+
+        function restartGame() {
+            snake = [{x: 10, y: 10}];
+            velocity = {x: 0, y: 0};
+            food = {x: 15, y: 15};
+            score = 0;
+            scoreElement.textContent = '점수: 0';
+            gameOverElement.style.display = 'none';
+            gameRunning = false;
+            isGameOver = false;
+            draw();
+        }
+
+        // 초기화
+        (async () => {
+            await loadRankings();
+            draw();
+        })();
+    </script>
+</body>
+</html>
