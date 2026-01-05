@@ -1,7 +1,7 @@
 {
-  "name": "snake-game-mysql",
+  "name": "snake-game-postgres",
   "version": "1.0.0",
-  "description": "Snake game with MySQL backend",
+  "description": "Snake game with PostgreSQL backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,7 +9,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.22.1",
-    "mysql2": "^3.6.5",
     "pg": "^8.16.3"
   }
 }
