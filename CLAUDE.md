@@ -27,20 +27,16 @@ The game uses **PostgreSQL** for ranking storage via a Node.js backend:
 - `isGameOver`: Prevents auto-restart after game over (must use "다시 시작" button)
 - `snake`: Array of position objects `{x, y}`
 - `velocity`: Current direction vector
-- `rankings`: Array of ranking records from PostgreSQL API
+- `rankings`: Array of ranking records from SQLite
 
-**Critical Functions (Frontend)**
-- `loadRankings()`: Fetches rankings from API server (`GET /api/rankings`)
-- `saveRanking(score)`: Sends score to API server (`POST /api/rankings`)
-- `clearRanking()`: Clears all rankings via API (`DELETE /api/rankings`)
+**Critical Functions**
+- `initDB()`: Initializes sql.js and creates/loads SQLite database
+- `loadDBFromStorage()`: Loads SQLite binary from IndexedDB
+- `saveDBToStorage()`: Persists SQLite binary to IndexedDB
+- `loadRankings()`: Async function that loads rankings via SQL query
+- `saveRanking(score)`: Async function that inserts score and maintains top 10 records
 - `gameOver()`: Sets `isGameOver = true` to prevent keyboard restart
 - `restartGame()`: Resets state including `isGameOver = false`
-
-**Critical Functions (Backend - server.js)**
-- `initDatabase()`: Creates database and rankings table if not exists
-- `GET /api/rankings`: Returns top 10 rankings ordered by score
-- `POST /api/rankings`: Inserts new score and maintains top 10 records
-- `DELETE /api/rankings`: Clears all rankings
 
 ### Game Loop Flow
 1. User presses arrow key → `startGame()` only if `!gameRunning && !isGameOver`
@@ -57,10 +53,9 @@ open snake_game.html
 
 ## Important Implementation Notes
 
-- **PostgreSQL Backend** - Rankings are stored in PostgreSQL database via Express.js API server on port 3333
-- **Database Config** - Host: localhost, Port: 5432, Database: snake_game, User: postgres
+- **SQLite via sql.js** - Rankings are stored in SQLite database. The binary is persisted to IndexedDB.
 - **Game restart prevention**: The `isGameOver` flag must be respected in `keyPress()` to prevent unwanted restarts
-- **Ranking cleanup**: API uses SQL DELETE to maintain only top 10 records
+- **Ranking cleanup**: `saveRanking()` uses SQL DELETE to maintain only top 10 records
 - **Canvas size**: 400x400px - do not change without adjusting scroll prevention in body styles
 - **Grid system**: 20px grid size, 20x20 tiles
 
