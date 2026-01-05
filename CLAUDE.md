@@ -13,10 +13,10 @@ This is a Snake game implemented as a single self-contained HTML file (`snake_ga
 ## Technical Architecture
 
 ### Data Storage
-The game uses **PostgreSQL** for ranking storage via a Node.js backend:
-- Library: `pg` (node-postgres)
-- Database: `snake_game` on localhost:5432
-- Table: `rankings` with columns `id` (SERIAL), `score`, `date`, `timestamp`
+The game uses **MySQL** for ranking storage via a Node.js backend:
+- Library: `mysql2` (mysql2/promise)
+- Database: `snake_game` on localhost:3306
+- Table: `rankings` with columns `id` (AUTO_INCREMENT), `score`, `date`, `timestamp`
 - API Server: Express.js running on port 3333
 - Storage limit: Top 10 records maintained automatically via SQL DELETE
 
@@ -27,7 +27,7 @@ The game uses **PostgreSQL** for ranking storage via a Node.js backend:
 - `isGameOver`: Prevents auto-restart after game over (must use "다시 시작" button)
 - `snake`: Array of position objects `{x, y}`
 - `velocity`: Current direction vector
-- `rankings`: Array of ranking records from PostgreSQL API
+- `rankings`: Array of ranking records from MySQL API
 
 **Critical Functions (Frontend)**
 - `loadRankings()`: Fetches rankings from API server (`GET /api/rankings`)
@@ -57,8 +57,8 @@ open snake_game.html
 
 ## Important Implementation Notes
 
-- **PostgreSQL Backend** - Rankings are stored in PostgreSQL database via Express.js API server on port 3333
-- **Database Config** - Host: localhost, Port: 5432, Database: snake_game, User: postgres
+- **MySQL Backend** - Rankings are stored in MySQL database via Express.js API server on port 3333
+- **Database Config** - Host: localhost, Port: 3306, Database: snake_game, User: root
 - **Game restart prevention**: The `isGameOver` flag must be respected in `keyPress()` to prevent unwanted restarts
 - **Ranking cleanup**: API uses SQL DELETE to maintain only top 10 records
 - **Canvas size**: 400x400px - do not change without adjusting scroll prevention in body styles

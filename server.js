@@ -1,5 +1,5 @@
 const express = require('express');
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 const cors = require('cors');
 const path = require('path');
 
@@ -10,74 +10,63 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// PostgreSQL 연결 설정
+// MySQL 연결 설정
 const dbConfig = {
     host: 'localhost',
-    user: 'postgres',
-    password: 'asdf1234',  // PostgreSQL 비밀번호 입력
-    database: 'snake_game',
-    port: 5432
+    user: 'root',
+    password: 'asdf1234',  // MySQL 비밀번호 입력
+    port: 3306
 };
 
 let pool;
 
 // 데이터베이스 초기화
 async function initDatabase() {
-    // 먼저 기본 데이터베이스에 연결하여 snake_game 데이터베이스 생성
-    const initPool = new Pool({
+    // 먼저 기본 연결로 snake_game 데이터베이스 생성
+    const initConnection = await mysql.createConnection({
         host: dbConfig.host,
         user: dbConfig.user,
         password: dbConfig.password,
-        database: 'postgres',
         port: dbConfig.port
     });
 
     try {
-        // 데이터베이스 존재 여부 확인
-        const dbCheck = await initPool.query(
-            "SELECT 1 FROM pg_database WHERE datname = $1",
-            [dbConfig.database]
-        );
-
-        if (dbCheck.rows.length === 0) {
-            await initPool.query(`CREATE DATABASE ${dbConfig.database}`);
-            console.log('데이터베이스 생성 완료');
-        }
-    } catch (error) {
-        // 데이터베이스가 이미 존재할 수 있음
-        console.log('데이터베이스 확인:', error.message);
+        await initConnection.query('CREATE DATABASE IF NOT EXISTS snake_game');
+        console.log('데이터베이스 확인/생성 완료');
     } finally {
-        await initPool.end();
+        await initConnection.end();
     }
 
-    // 실제 데이터베이스에 연결
-    pool = new Pool(dbConfig);
+    // 실제 데이터베이스에 연결 풀 생성
+    pool = mysql.createPool({
+        ...dbConfig,
+        database: 'snake_game',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    });
 
     // 테이블 생성
     await pool.query(`
         CREATE TABLE IF NOT EXISTS rankings (
-            id SERIAL PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
             score INT NOT NULL,
             date VARCHAR(50) NOT NULL,
-            timestamp BIGINT NOT NULL
+            timestamp BIGINT NOT NULL,
+            INDEX idx_score (score DESC)
         )
     `);
 
-    // 인덱스 생성 (없으면)
-    await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_score ON rankings (score DESC)
-    `);
-
-    console.log('PostgreSQL 데이터베이스 초기화 완료');
+    console.log('MySQL 데이터베이스 초기화 완료');
 }
 
 // 랭킹 조회 API
 app.get('/api/rankings', async (req, res) => {
     try {
-        const result = await pool.query(
+        const [rows] = await pool.query(
             'SELECT id, score, date, timestamp FROM rankings ORDER BY score DESC LIMIT 10'
         );
-        res.json(result.rows);
+        res.json(rows);
     } catch (error) {
         console.error('랭킹 조회 오류:', error);
         res.status(500).json({ error: '랭킹 조회 실패' });
@@ -90,7 +79,7 @@ app.post('/api/rankings', async (req, res) => {
         const { score, date, timestamp } = req.body;
 
         await pool.query(
-            'INSERT INTO rankings (score, date, timestamp) VALUES ($1, $2, $3)',
+            'INSERT INTO rankings (score, date, timestamp) VALUES (?, ?, ?)',
             [score, date, timestamp]
         );
 
@@ -98,7 +87,9 @@ app.post('/api/rankings', async (req, res) => {
         await pool.query(`
             DELETE FROM rankings
             WHERE id NOT IN (
-                SELECT id FROM rankings ORDER BY score DESC LIMIT 10
+                SELECT id FROM (
+                    SELECT id FROM rankings ORDER BY score DESC LIMIT 10
+                ) AS top_rankings
             )
         `);
 
